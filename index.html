@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="only light">
+<title>Certificado AYNI — Mariposas Urbanas</title>
+<meta name="description" content="Certificado de agradecimiento AYNI — Reciprocidad con la vida.">
+<link rel="icon" href="img/icono.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/certificado.css">
+</head>
+<body>
+
+  <section class="tarjeta estado" id="estado">
+    <div class="logo"><img src="img/logo.jpg" alt="Mariposas Urbanas"></div>
+    <h1 id="estado-titulo">Verificando certificado…</h1>
+    <p id="estado-texto"></p>
+  </section>
+
+  <main class="tarjeta" id="certificado" hidden>
+    <div class="logo"><img src="img/logo.jpg" alt="Mariposas Urbanas"></div>
+
+    <h1 class="titulo">AYNI</h1>
+    <p class="subtitulo">RECIPROCIDAD CON LA VIDA<img src="img/mariposa.png" alt=""></p>
+
+    <p class="gratitud">ESTE CERTIFICADO SE EXTIENDE CON PROFUNDA GRATITUD A</p>
+    <p class="nombre" id="nombre"></p>
+
+    <p class="mensaje">
+      Más que una donación, este regalo en tu nombre es un ayni: un intercambio
+      sagrado y recíproco con la naturaleza. Gracias a tu apoyo, Mariposas Urbanas
+      puede seguir con la recuperación de las poblaciones de mariposas en zonas
+      urbanas, difundir conocimiento ambiental y crear ciudades sostenibles; además,
+      serás parte de la creación del primer centro de rescate para polinizadores en
+      nuestra ciudad.
+    </p>
+
+    <div class="firma">
+      <p class="persona">Victoria Alcántara</p>
+      <p class="cargo">DIRECTORA<br>MARIPOSAS URBANAS</p>
+    </div>
+
+    <p class="lema">CONOCER • CUIDAR • AMAR</p>
+  </main>
+
+  <p class="sello" id="sello" hidden>&#10003; Certificado verificado por Mariposas Urbanas</p>
+
+<script src="llave_publica.js"></script>
+<script>
+  // Sin datos en el enlace → certificado GENERAL (el QR único, igual para todos).
+  // Con ?nombre=...&firma=... → certificado PERSONALIZADO: solo se muestra si la
+  // firma, hecha con la llave privada del generador, coincide con el nombre.
+  const NOMBRE_GENERAL = 'Nuestra comunidad de donantes';  // provisional: falta confirmar el texto
+  const VERSION_FIRMA = 'ayni-v1';
+  const datos = new URLSearchParams(location.search);
+
+  const ESTADOS = {
+    'no-valido': ['✗ Certificado no válido',
+      'Este certificado no fue emitido por Mariposas Urbanas o sus datos fueron modificados.'],
+    'sin-verificar': ['No se pudo verificar el certificado',
+      'Tu navegador no permite verificarlo. Ábrelo en un navegador actualizado (Chrome, Safari, Firefox o Edge).'],
+  };
+
+  function mostrarEstado(clave) {
+    const [titulo, texto] = ESTADOS[clave];
+    document.getElementById('estado').className = 'tarjeta estado ' + clave;
+    document.getElementById('estado-titulo').textContent = titulo;
+    document.getElementById('estado-texto').textContent = texto;
+  }
+
+  function mostrarCertificado(nombre, verificado) {
+    document.getElementById('nombre').textContent = nombre;
+    document.getElementById('estado').hidden = true;
+    document.getElementById('certificado').hidden = false;
+    document.getElementById('sello').hidden = !verificado;
+  }
+
+  function base64ABytes(b64) {
+    return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+  }
+
+  function base64UrlABytes(texto) {
+    let b64 = texto.replace(/-/g, '+').replace(/_/g, '/');
+    while (b64.length % 4) b64 += '=';
+    return base64ABytes(b64);
+  }
+
+  async function firmaEsValida(nombre, firma) {
+    const clave = await crypto.subtle.importKey(
+      'spki', base64ABytes(LLAVE_PUBLICA),
+      { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']
+    );
+    // Debe ser idéntico al mensaje que firma el generador (JSON del mismo arreglo).
+    const mensaje = JSON.stringify([VERSION_FIRMA, nombre]);
+    return crypto.subtle.verify(
+      { name: 'ECDSA', hash: 'SHA-256' }, clave,
+      base64UrlABytes(firma), new TextEncoder().encode(mensaje)
+    );
+  }
+
+  (async () => {
+    const nombre = datos.get('nombre') || '';
+    const firma = datos.get('firma') || '';
+
+    if (!nombre && !firma) return mostrarCertificado(NOMBRE_GENERAL, false);
+    if (!window.crypto || !crypto.subtle || typeof LLAVE_PUBLICA === 'undefined') {
+      return mostrarEstado('sin-verificar');
+    }
+
+    let valida = false;
+    try {
+      valida = firma !== '' && await firmaEsValida(nombre, firma);
+    } catch {
+      valida = false;
+    }
+    if (!valida) return mostrarEstado('no-valido');
+    mostrarCertificado(nombre, true);
+  })();
+</script>
+</body>
+</html>
