@@ -1,8 +1,8 @@
 :root {
-  --tinta: #3c4636;      /* verde oscuro de los títulos */
+  --tinta: #3c4636;
   --texto: #434b3f;
   --suave: #6b7064;
-  --linea: #5b4e3d;      /* línea marrón del diseño */
+  --linea: #5b4e3d;
   --papel: #ffffff;
   --verde-ok: #3f7a3a;
   --rojo: #a5432f;
@@ -20,13 +20,13 @@ body {
   align-items: center;
   padding: 48px 24px;
 }
-/* Ilustración de mariposas detrás de la tarjeta (fija, así no se repite al hacer scroll) */
+
 body::before {
   content: "";
   position: fixed;
   inset: 0;
   z-index: -1;
-  background: url("../img/fondo.jpg") center / cover no-repeat;
+  background: url("../img/fondo.jpg") 0 0 / 100% 100% no-repeat;
 }
 
 .tarjeta {
@@ -40,7 +40,7 @@ body::before {
   text-align: center;
   animation: aparecer .6s ease-out both;
 }
-@keyframes aparecer { from { opacity: 0; transform: translateY(10px); } }
+@keyframes aparecer { from { opacity: 0; } }
 
 .logo {
   position: absolute;
@@ -49,6 +49,10 @@ body::before {
   width: 190px;
 }
 .logo img { width: 100%; display: block; }
+
+@media (max-width: 1000px) {
+  .logo { position: static; width: 170px; margin: 0 auto 18px; }
+}
 
 .titulo {
   font-family: 'Cormorant Garamond', Georgia, serif;
@@ -67,12 +71,12 @@ body::before {
   color: var(--tinta);
   margin: 0 0 40px;
 }
+
 .subtitulo img {
   position: absolute;
-  width: 46px;
-  right: -38px;
-  top: -26px;
-  transform: rotate(-12deg);
+  width: 1.42em;
+  right: -0.83em;
+  top: -0.65em;
 }
 .gratitud {
   font-size: 1.05rem;
@@ -122,8 +126,9 @@ body::before {
   margin: 22px 0 0;
 }
 
+.pie { position: relative; margin-top: 20px; }
+
 .sello {
-  margin: 20px 0 0;
   background: rgba(255, 255, 255, .94);
   color: var(--verde-ok);
   border-radius: 18px;
@@ -134,18 +139,63 @@ body::before {
   box-shadow: 0 2px 8px rgba(40, 45, 25, .2);
 }
 .sello p { margin: 0; }
-/* número del certificado (001/100), debajo del texto del sello */
+
 .sello .numero {
   font-family: 'Cormorant Garamond', Georgia, serif;
   font-size: 1.45rem;
   font-weight: 600;
   letter-spacing: .06em;
-  font-variant-numeric: lining-nums;  /* números de igual altura (esta letra los hace "antiguos") */
+  font-variant-numeric: lining-nums;
   color: var(--tinta);
   margin-top: 2px;
 }
 
-/* Mensajes cuando el enlace no es válido */
+.descargar {
+  position: absolute;
+  left: calc(100% + 40px);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 54px;
+  height: 54px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--tinta);
+  color: #fff;
+  font: 600 1rem 'Inter', system-ui, sans-serif;
+  box-shadow: 0 2px 8px rgba(40, 45, 25, .3);
+  cursor: pointer;
+}
+.descargar:hover { background: #2c3427; }
+.descargar span { display: none; }
+.descargar::after {
+  content: attr(aria-label);
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: var(--tinta);
+  font-size: .82rem;
+  font-weight: 500;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .15s;
+}
+.descargar:hover::after, .descargar:focus-visible::after { opacity: 1; }
+
+@media (max-width: 1000px) {
+  .pie { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  .descargar { position: static; transform: none; width: auto; height: auto; padding: 12px 26px; border-radius: 999px; }
+  .descargar span { display: inline; }
+  .descargar::after { display: none; }
+}
+
 .estado { max-width: 560px; padding: 48px 40px; }
 .estado h1 { font-size: 1.5rem; font-weight: 500; color: var(--tinta); margin: 18px 0 12px; }
 .estado p { color: var(--suave); line-height: 1.6; margin: 0; }
@@ -154,20 +204,34 @@ body::before {
 
 [hidden] { display: none !important; }
 
-/* Celular: la tarjeta pasa a vertical y el logo va arriba, centrado */
 @media (max-width: 720px) {
   body { padding: 20px 14px; }
   .tarjeta { padding: 28px 22px 30px; }
-  .logo { position: static; width: 150px; margin: 0 auto 18px; }
+  .logo { width: 150px; }
   .titulo { font-size: 3.6rem; margin-bottom: 12px; }
   .subtitulo { font-size: .95rem; letter-spacing: .1em; margin-bottom: 28px; }
-  .subtitulo img { width: 34px; right: -28px; top: -20px; }
+  .subtitulo img { right: -0.87em; }
   .gratitud { font-size: .8rem; letter-spacing: .1em; margin-bottom: 18px; }
   .nombre { font-size: 1.9rem; width: 100%; }
-  /* justificado en pantalla angosta deja huecos grandes entre palabras */
-  .mensaje { font-size: 1rem; line-height: 1.65; margin: 28px 0 34px; text-align: left; }
+
+  .mensaje { font-size: 1rem; line-height: 1.65; margin: 28px 0 34px; text-align: center; hyphens: none; }
   .sello { font-size: .78rem; padding: 6px 14px; }
   .firma { min-width: 200px; }
   .lema { font-size: 1.15rem; }
   .estado { padding: 32px 22px; }
+}
+
+@media print {
+  @page { size: A4 landscape; margin: 0; }
+  body { display: block; padding: 0; background: #fff; }
+  body::before, #sello { display: none !important; }
+  #certificado { zoom: 1 !important; }
+  .tarjeta { max-width: none; height: 100vh; overflow: hidden; padding: 64px 62px 0; box-shadow: none; border-radius: 0; animation: none; }
+  .logo { position: absolute; top: 40px; left: 48px; width: 190px; margin: 0; }
+  .titulo { font-size: 4.6rem; }
+  .subtitulo { font-size: 1.55rem; margin-bottom: 44px; }
+  .gratitud { font-size: 1.32rem; max-width: 26em; margin-bottom: 40px; }
+  .nombre { width: 55%; }
+  .mensaje { font-size: 1.32rem; line-height: 1.5; hyphens: none; margin: 34px 0 44px; }
+  .lema { font-size: 1.35rem; margin-top: 24px; }
 }

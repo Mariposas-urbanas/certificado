@@ -4,19 +4,19 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="only light">
-<title>Certificado AYNI — Mariposas Urbanas</title>
-<meta name="description" content="Certificado de agradecimiento AYNI — Reciprocidad con la vida.">
+<title>Certificado AYNI - Mariposas Urbanas</title>
+<meta name="description" content="Certificado de agradecimiento AYNI - Reciprocidad con la vida.">
 <link rel="icon" href="img/icono.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/certificado.css">
+<link rel="stylesheet" href="css/certificado.css?v=4">
 </head>
 <body>
 
   <section class="tarjeta estado" id="estado">
     <div class="logo"><img src="img/logo.jpg" alt="Mariposas Urbanas"></div>
-    <h1 id="estado-titulo">Verificando certificado…</h1>
+    <h1 id="estado-titulo">Verificando certificado...</h1>
     <p id="estado-texto"></p>
   </section>
 
@@ -46,17 +46,19 @@
     <p class="lema">CONOCER • CUIDAR • AMAR</p>
   </main>
 
-  <div class="sello" id="sello" hidden>
-    <p>&#10003; Certificado verificado por Mariposas Urbanas</p>
-    <p class="numero" id="numero"></p>
+  <div class="pie" id="sello" hidden>
+    <div class="sello">
+      <p>&#10003; Certificado verificado por Mariposas Urbanas</p>
+      <p class="numero" id="numero"></p>
+    </div>
+    <button class="descargar" type="button" onclick="print()" aria-label="Descargar certificado">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+      <span>Descargar certificado (PDF)</span>
+    </button>
   </div>
 
 <script>
-  // Sin datos en el enlace → certificado GENERAL (el QR único, igual para todos).
-  // Con ?c=CODIGO → uno de los 100 NUMERADOS: el código se busca en datos.json y
-  // con él se descifra el nombre (sin el código, el nombre no se puede leer).
-  // Debe coincidir con app.py (_indice, _llave, _cifrar_nombre).
-  const NOMBRE_GENERAL = 'Nuestra comunidad de donantes';  // provisional: falta confirmar el texto
+  const NOMBRE_GENERAL = 'Nuestra comunidad de donantes';
   const codigo = new URLSearchParams(location.search).get('c');
 
   const ESTADOS = {
@@ -77,7 +79,9 @@
     document.getElementById('estado-texto').textContent = texto.replace('{numero}', numero);
   }
 
-  function mostrarCertificado(nombre, numero) {
+  async function mostrarCertificado(nombre, numero) {
+    await Promise.all(['500 1em "Cormorant Garamond"', '600 1em "Cormorant Garamond"', 'italic 600 1em "Cormorant Garamond"', '1em Inter']
+      .map((f) => document.fonts.load(f)));
     document.getElementById('nombre').textContent = nombre;
     document.getElementById('estado').hidden = true;
     document.getElementById('certificado').hidden = false;
@@ -85,7 +89,22 @@
       document.getElementById('numero').textContent = numero;
       document.getElementById('sello').hidden = false;
     }
+    ajustarAlto();
   }
+
+  function ajustarAlto() {
+    const partes = [document.getElementById('certificado'), document.getElementById('sello')];
+    partes.forEach((p) => (p.style.zoom = ''));
+    if (innerWidth <= 720) return;
+    const relleno = parseFloat(getComputedStyle(document.body).paddingTop) * 2;
+    const alto = document.documentElement.scrollHeight;
+    if (alto <= innerHeight) return;
+    const escala = (innerHeight - relleno - 2) / (alto - relleno);
+    if (escala < 0.7) return;
+    partes.forEach((p) => (p.style.zoom = escala));
+  }
+
+  addEventListener('resize', ajustarAlto);
 
   async function sha256(texto) {
     return new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto)));
@@ -115,7 +134,6 @@
 
     let datos;
     try {
-      // ?v= evita que el celular muestre una versión vieja guardada.
       const respuesta = await fetch('datos.json?v=' + Date.now());
       if (!respuesta.ok) throw new Error(respuesta.status);
       datos = await respuesta.json();
@@ -129,7 +147,7 @@
     if (!entrada.d) return mostrarEstado('no-registrado', numero);
 
     try {
-      mostrarCertificado(await descifrarNombre(entrada), numero);
+      await mostrarCertificado(await descifrarNombre(entrada), numero);
     } catch {
       mostrarEstado('no-valido');
     }
