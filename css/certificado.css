@@ -124,13 +124,25 @@ body::before {
 
 .sello {
   margin: 20px 0 0;
-  background: rgba(255, 255, 255, .92);
+  background: rgba(255, 255, 255, .94);
   color: var(--verde-ok);
-  border-radius: 20px;
-  padding: 7px 16px;
+  border-radius: 18px;
+  padding: 9px 20px 8px;
   font-size: .88rem;
   font-weight: 500;
+  text-align: center;
   box-shadow: 0 2px 8px rgba(40, 45, 25, .2);
+}
+.sello p { margin: 0; }
+/* número del certificado (001/100), debajo del texto del sello */
+.sello .numero {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.45rem;
+  font-weight: 600;
+  letter-spacing: .06em;
+  font-variant-numeric: lining-nums;  /* números de igual altura (esta letra los hace "antiguos") */
+  color: var(--tinta);
+  margin-top: 2px;
 }
 
 /* Mensajes cuando el enlace no es válido */

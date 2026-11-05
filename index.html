@@ -46,78 +46,93 @@
     <p class="lema">CONOCER • CUIDAR • AMAR</p>
   </main>
 
-  <p class="sello" id="sello" hidden>&#10003; Certificado verificado por Mariposas Urbanas</p>
+  <div class="sello" id="sello" hidden>
+    <p>&#10003; Certificado verificado por Mariposas Urbanas</p>
+    <p class="numero" id="numero"></p>
+  </div>
 
-<script src="llave_publica.js"></script>
 <script>
   // Sin datos en el enlace → certificado GENERAL (el QR único, igual para todos).
-  // Con ?nombre=...&firma=... → certificado PERSONALIZADO: solo se muestra si la
-  // firma, hecha con la llave privada del generador, coincide con el nombre.
+  // Con ?c=CODIGO → uno de los 100 NUMERADOS: el código se busca en datos.json y
+  // con él se descifra el nombre (sin el código, el nombre no se puede leer).
+  // Debe coincidir con app.py (_indice, _llave, _cifrar_nombre).
   const NOMBRE_GENERAL = 'Nuestra comunidad de donantes';  // provisional: falta confirmar el texto
-  const VERSION_FIRMA = 'ayni-v1';
-  const datos = new URLSearchParams(location.search);
+  const codigo = new URLSearchParams(location.search).get('c');
 
   const ESTADOS = {
     'no-valido': ['✗ Certificado no válido',
-      'Este certificado no fue emitido por Mariposas Urbanas o sus datos fueron modificados.'],
+      'Este certificado no fue emitido por Mariposas Urbanas o el enlace fue modificado.'],
+    'no-registrado': ['Aún no registrado',
+      'El certificado {numero} todavía no tiene un nombre asignado. Vuelve a escanear este QR más adelante.'],
+    'sin-conexion': ['No se pudo cargar el certificado',
+      'Revisa tu conexión a internet y vuelve a intentarlo.'],
     'sin-verificar': ['No se pudo verificar el certificado',
       'Tu navegador no permite verificarlo. Ábrelo en un navegador actualizado (Chrome, Safari, Firefox o Edge).'],
   };
 
-  function mostrarEstado(clave) {
+  function mostrarEstado(clave, numero = '') {
     const [titulo, texto] = ESTADOS[clave];
     document.getElementById('estado').className = 'tarjeta estado ' + clave;
     document.getElementById('estado-titulo').textContent = titulo;
-    document.getElementById('estado-texto').textContent = texto;
+    document.getElementById('estado-texto').textContent = texto.replace('{numero}', numero);
   }
 
-  function mostrarCertificado(nombre, verificado) {
+  function mostrarCertificado(nombre, numero) {
     document.getElementById('nombre').textContent = nombre;
     document.getElementById('estado').hidden = true;
     document.getElementById('certificado').hidden = false;
-    document.getElementById('sello').hidden = !verificado;
+    if (numero) {
+      document.getElementById('numero').textContent = numero;
+      document.getElementById('sello').hidden = false;
+    }
+  }
+
+  async function sha256(texto) {
+    return new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto)));
+  }
+
+  function aHex(bytes) {
+    return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
   }
 
   function base64ABytes(b64) {
     return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
   }
 
-  function base64UrlABytes(texto) {
-    let b64 = texto.replace(/-/g, '+').replace(/_/g, '/');
-    while (b64.length % 4) b64 += '=';
-    return base64ABytes(b64);
-  }
-
-  async function firmaEsValida(nombre, firma) {
-    const clave = await crypto.subtle.importKey(
-      'spki', base64ABytes(LLAVE_PUBLICA),
-      { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']
+  async function descifrarNombre(entrada) {
+    const llave = await crypto.subtle.importKey(
+      'raw', await sha256('ayni-clave:' + codigo), 'AES-GCM', false, ['decrypt']
     );
-    // Debe ser idéntico al mensaje que firma el generador (JSON del mismo arreglo).
-    const mensaje = JSON.stringify([VERSION_FIRMA, nombre]);
-    return crypto.subtle.verify(
-      { name: 'ECDSA', hash: 'SHA-256' }, clave,
-      base64UrlABytes(firma), new TextEncoder().encode(mensaje)
+    const datos = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: base64ABytes(entrada.iv) }, llave, base64ABytes(entrada.d)
     );
+    return JSON.parse(new TextDecoder().decode(datos)).nombre;
   }
 
   (async () => {
-    const nombre = datos.get('nombre') || '';
-    const firma = datos.get('firma') || '';
+    if (!codigo) return mostrarCertificado(NOMBRE_GENERAL, '');
+    if (!window.crypto || !crypto.subtle) return mostrarEstado('sin-verificar');
 
-    if (!nombre && !firma) return mostrarCertificado(NOMBRE_GENERAL, false);
-    if (!window.crypto || !crypto.subtle || typeof LLAVE_PUBLICA === 'undefined') {
-      return mostrarEstado('sin-verificar');
-    }
-
-    let valida = false;
+    let datos;
     try {
-      valida = firma !== '' && await firmaEsValida(nombre, firma);
+      // ?v= evita que el celular muestre una versión vieja guardada.
+      const respuesta = await fetch('datos.json?v=' + Date.now());
+      if (!respuesta.ok) throw new Error(respuesta.status);
+      datos = await respuesta.json();
     } catch {
-      valida = false;
+      return mostrarEstado('sin-conexion');
     }
-    if (!valida) return mostrarEstado('no-valido');
-    mostrarCertificado(nombre, true);
+
+    const entrada = datos.certificados[aHex(await sha256(codigo))];
+    if (!entrada) return mostrarEstado('no-valido');
+    const numero = String(entrada.n).padStart(3, '0') + '/' + datos.total;
+    if (!entrada.d) return mostrarEstado('no-registrado', numero);
+
+    try {
+      mostrarCertificado(await descifrarNombre(entrada), numero);
+    } catch {
+      mostrarEstado('no-valido');
+    }
   })();
 </script>
 </body>
